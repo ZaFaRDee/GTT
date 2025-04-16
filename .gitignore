@@ -1,0 +1,55 @@
+# === Maxfiy fayllar (credentials) ===
+.env
+.env.*  # qo‘shimcha config fayllar uchun
+
+# === Python fayllari ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.log
+*.pkl  # pickle fayllar
+
+# === Screenshotlar, vaqtinchalik rasm fayllari ===
+images/
+*.png
+*.jpg
+*.jpeg
+
+# === Jupyter notebook checkpointlar ===
+.ipynb_checkpoints/
+
+# === IDE konfiguratsiyalari ===
+
+# PyCharm / IntelliJ
+.idea/
+*.iml
+
+# VSCode
+.vscode/
+
+# === MacOS / Windows / Linux tizimga oid fayllar ===
+.DS_Store
+Thumbs.db
+
+# === Cache va vaqtinchalik fayllar ===
+.cache/
+*.tmp
+*.bak
+
+# === Virtual environment ===
+.venv/
+venv/
+ENV/
+env/
+
+# === Model va AI fayllar (agar mavjud bo‘lsa) ===
+*.pt
+*.pth
+*.onnx
+
+# === Log va error files ===
+logs/
+*.log
+
+# ===FinBERT model uchun
+models/
