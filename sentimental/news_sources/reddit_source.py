@@ -1,8 +1,8 @@
-import praw
+import asyncpraw
 from datetime import datetime
 
-def get_reddit_headlines(ticker, client_id, client_secret, user_agent, max_count=30):
-    reddit = praw.Reddit(
+async def get_reddit_headlines(ticker, client_id, client_secret, user_agent, max_count=30):
+    reddit = asyncpraw.Reddit(
         client_id=client_id,
         client_secret=client_secret,
         user_agent=user_agent
@@ -14,7 +14,8 @@ def get_reddit_headlines(ticker, client_id, client_secret, user_agent, max_count
 
     try:
         for sub in subreddits:
-            for post in reddit.subreddit(sub).search(query, sort='new', time_filter='month', limit=max_count):
+            subreddit = await reddit.subreddit(sub)
+            async for post in subreddit.search(query, sort='new', time_filter='month', limit=max_count):
                 if not post.stickied:
                     dt = datetime.fromtimestamp(post.created_utc).strftime('%Y-%m-%d %H:%M')
                     headlines.append((post.title.strip(), dt))
@@ -22,4 +23,5 @@ def get_reddit_headlines(ticker, client_id, client_secret, user_agent, max_count
         print(f"[Reddit] Xato: {e}")
         return []
 
+    await reddit.close()
     return headlines

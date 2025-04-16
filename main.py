@@ -67,7 +67,7 @@ async def main():
             if not is_monitoring_paused():
                 alerts = get_new_alerts()
                 if alerts:
-                    send_alerts_to_telegram(alerts)
+                    await send_alerts_to_telegram(alerts)
                     set_last_alert_time()
                     print(f"📤 {len(alerts)} ta alert yuborildi.")
                 else:

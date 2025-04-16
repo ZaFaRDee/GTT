@@ -12,7 +12,7 @@ from barchart_utils import get_put_call_volume
 from sentimental.news_sentiment import get_sentiment_summary
 
 
-def send_alerts_to_telegram(alerts):
+async def send_alerts_to_telegram(alerts):
     bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
     for alert in alerts:
@@ -43,7 +43,7 @@ def send_alerts_to_telegram(alerts):
                     put_vol = f"{int(put_vol):,}"
 
                 # Sentimental Analysis
-                sentiment_block = get_sentiment_summary(ticker)
+                sentiment_block = await get_sentiment_summary(ticker)
 
                 caption = (
                     f"💹 <b>Ticker:</b> #{ticker}\n"

@@ -19,7 +19,7 @@ def analyze_and_summarize_source(name, headlines):
     overall = "Positive" if pos > neg else ("Negative" if neg > pos else "Neutral")
     return name, pos, neu, neg, overall
 
-def get_sentiment_summary(ticker):
+async def get_sentiment_summary(ticker):
     sources = []
     total_pos = 0
     total_neg = 0
@@ -33,7 +33,7 @@ def get_sentiment_summary(ticker):
         total_neg += neg
 
     # Reddit
-    reddit_headlines = get_reddit_headlines(ticker, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT)
+    reddit_headlines = await get_reddit_headlines(ticker, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT)
     if reddit_headlines:
         name, pos, neu, neg, overall = analyze_and_summarize_source("Reddit.com", reddit_headlines)
         sources.append((name, pos, neu, neg, overall))
