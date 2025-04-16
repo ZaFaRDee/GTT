@@ -3,6 +3,8 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
+torch.set_num_threads(1)
+
 # Mahalliy model papkasi
 model_path = "models/finbert"
 remote_model = "yiyanghkust/finbert-tone"

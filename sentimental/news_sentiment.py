@@ -1,3 +1,4 @@
+import asyncio
 from sentimental.finbert_sentiment import analyze_with_finbert
 from sentimental.news_sources.reddit_source import get_reddit_headlines
 from sentimental.news_sources.finviz_source import get_finviz_headlines
@@ -6,71 +7,61 @@ from sentimental.news_sources.marketaux_source import get_marketaux_headlines
 from sentimental.news_sources.newsapi_source import get_newsapi_headlines
 from config import REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT, MARKETAUX_API_KEY, NEWSAPI_KEY
 
-def analyze_and_summarize_source(name, headlines):
-    sentiments = []
-    for title, _ in headlines:
-        label, _ = analyze_with_finbert(title)
-        sentiments.append(label)
-
-    pos = sentiments.count("🟢 Positive")
-    neu = sentiments.count("🟡 Neutral")
-    neg = sentiments.count("🔴 Negative")
-
-    overall = "Positive" if pos > neg else ("Negative" if neg > pos else "Neutral")
-    return name, pos, neu, neg, overall
-
 async def get_sentiment_summary(ticker):
+    async def wrap(func, *args):
+        try:
+            if asyncio.iscoroutinefunction(func):
+                return await func(*args)
+            else:
+                # run sync function in executor
+                loop = asyncio.get_event_loop()
+                return await loop.run_in_executor(None, func, *args)
+        except Exception as e:
+            print(f"[❌] {func.__name__} xatolik: {e}")
+            return []
+
+    tasks = [
+        wrap(get_finviz_headlines, ticker),
+        wrap(get_reddit_headlines, ticker, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT),
+        wrap(get_stocktwits_headlines, ticker),
+        wrap(get_marketaux_headlines, ticker, MARKETAUX_API_KEY),
+        wrap(get_newsapi_headlines, ticker, NEWSAPI_KEY),
+    ]
+
+    results = await asyncio.gather(*tasks)
+    source_names = ["Finviz.com", "Reddit.com", "Stocktwits.com", "Marketaux.com", "NewsAPI.com"]
+
     sources = []
     total_pos = 0
     total_neg = 0
 
-    # Finviz
-    finviz_headlines = get_finviz_headlines(ticker)
-    if finviz_headlines:
-        name, pos, neu, neg, overall = analyze_and_summarize_source("Finviz.com", finviz_headlines)
-        sources.append((name, pos, neu, neg, overall))
-        total_pos += pos
-        total_neg += neg
+    for i, headlines in enumerate(results):
+        if not headlines:
+            continue
 
-    # Reddit
-    reddit_headlines = await get_reddit_headlines(ticker, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT)
-    if reddit_headlines:
-        name, pos, neu, neg, overall = analyze_and_summarize_source("Reddit.com", reddit_headlines)
-        sources.append((name, pos, neu, neg, overall))
-        total_pos += pos
-        total_neg += neg
+        sentiments = []
+        for title, _ in headlines:
+            label, _ = analyze_with_finbert(title)
+            sentiments.append(label)
 
-    # Stocktwits
-    stocktwits_headlines = get_stocktwits_headlines(ticker)
-    if stocktwits_headlines:
-        name, pos, neu, neg, overall = analyze_and_summarize_source("Stocktwits.com", stocktwits_headlines)
-        sources.append((name, pos, neu, neg, overall))
-        total_pos += pos
-        total_neg += neg
+        pos = sentiments.count("🟢 Positive")
+        neu = sentiments.count("🟡 Neutral")
+        neg = sentiments.count("🔴 Negative")
 
-    # Marketaux
-    marketaux_headlines = get_marketaux_headlines(ticker, MARKETAUX_API_KEY)
-    if marketaux_headlines:
-        name, pos, neu, neg, overall = analyze_and_summarize_source("Marketaux.com", marketaux_headlines)
-        sources.append((name, pos, neu, neg, overall))
-        total_pos += pos
-        total_neg += neg
-
-    # NewsAPI
-    newsapi_headlines = get_newsapi_headlines(ticker, NEWSAPI_KEY)
-    if newsapi_headlines:
-        name, pos, neu, neg, overall = analyze_and_summarize_source("NewsAPI.com", newsapi_headlines)
-        sources.append((name, pos, neu, neg, overall))
+        overall = "Positive" if pos > neg else ("Negative" if neg > pos else "Neutral")
+        sources.append((source_names[i], pos, neu, neg, overall))
         total_pos += pos
         total_neg += neg
 
     if not sources:
         return "\U0001F4F0 Sentimental Analysis:\n\tMa'lumot topilmadi."
 
-    lines = [f"\U0001F4F0 <b>Sentimental Score: {total_pos} / {total_pos + total_neg}</b>"]
+    total = total_pos + total_neg
+    lines = [f"📰 <b>Sentimental Score:</b> {total_pos} / {total}"]
     for name, pos, neu, neg, overall in sources:
-        name_padded = name.ljust(12)
-        lines.append(f"\U0001F310 <b>{name_padded}</b> → <b>{overall}</b>")
+        name_aligned = name.ljust(16)  # ustunlarni to‘g‘rilash uchun
+        lines.append(f"🌐 <b>{name_aligned}</b> → <b>{overall}</b>")
         lines.append(f"🟢 {str(pos).ljust(3)} 🟡 {str(neu).ljust(3)} 🔴 {str(neg).ljust(3)}")
 
     return "\n".join(lines)
+
