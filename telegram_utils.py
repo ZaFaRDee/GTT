@@ -10,10 +10,12 @@ from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from finviz_analysis import get_finviz_fundamentals
 from barchart_utils import get_put_call_volume
 from sentimental.news_sentiment import get_sentiment_summary
+import time
 
 
 async def send_alerts_to_telegram(alerts):
     bot = Bot(token=TELEGRAM_BOT_TOKEN)
+    start_all = time.time()
 
     for alert in alerts:
         algo_name = alert['algo']
@@ -25,14 +27,25 @@ async def send_alerts_to_telegram(alerts):
 
             try:
                 # Asosiy ma'lumotlar yfinance
+                print(f"[⏱] 📊 get_stock_info: {time.time() - start_all:.2f}s")
+                t1 = time.time()
                 price, rsi, yf_volume = get_stock_info(ticker)
+                print(f"[⏱] 🔼 calc_support_resistance: {time.time() - t1:.2f}s")
+                t2 = time.time()
                 support, resistance = calculate_support_resistance_from_range(ticker)
+                print(f"[⏱] 🖼️ chart_screenshot: {time.time() - t2:.2f}s")
+                t3 = time.time()
                 image_path = tradingview_chart_only_screenshot(ticker)
 
                 # Fundamental tahlil (Finviz orqali)
+
+                print(f"[⏱] 🧾 fundamental_analysis: {time.time() - t3:.2f}s")
+                t4 = time.time()
                 summary, evaluated_lines, display_lines, rsi_finviz, volume = get_finviz_fundamentals(ticker)
 
                 # Put va Call Volume (Barchart orqali)
+                print(f"[⏱] 📉 barchart_volume: {time.time() - t4:.2f}s")
+                t5 = time.time()
                 volume_data = get_put_call_volume(ticker)
                 call_vol = volume_data.get("Call Volume", "?")
                 put_vol = volume_data.get("Put Volume", "?")
@@ -43,6 +56,8 @@ async def send_alerts_to_telegram(alerts):
                     put_vol = f"{int(put_vol):,}"
 
                 # Sentimental Analysis
+                print(f"[⏱] 🤖 sentiment_analysis: {time.time() - t5:.2f}s")
+                t6 = time.time()
                 sentiment_block = await get_sentiment_summary(ticker)
 
                 caption = (
@@ -116,9 +131,11 @@ async def send_alerts_to_telegram(alerts):
                     f"🕒 <b>Time:</b> {now}\n\n"
                     f"⚠️ Grafik topilmadi: <a href='https://www.tradingview.com/chart/?symbol={tv_symbol}'>TradingView</a>"
                 )
-
+                print(f"[⏱] ✉️ send_photo: {time.time() - t6:.2f}s")
+                t7 = time.time()
                 bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=fallback_message, parse_mode='HTML')
 
             finally:
                 if image_path and os.path.exists(image_path):
                     os.remove(image_path)
+                print(f"[✅] Umumiy vaqt: {time.time() - start_all:.2f}s")
