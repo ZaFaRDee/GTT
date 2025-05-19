@@ -1,5 +1,5 @@
 # telegram_utils.py
-
+import asyncio
 import os
 import datetime
 from telegram import Bot
@@ -11,6 +11,7 @@ from finviz_analysis import get_finviz_fundamentals
 from barchart_utils import get_put_call_volume
 from sentimental.news_sentiment import get_sentiment_summary
 import time
+from telegram import InputFile
 
 
 async def send_alerts_to_telegram(alerts):
@@ -139,3 +140,74 @@ async def send_alerts_to_telegram(alerts):
                 if image_path and os.path.exists(image_path):
                     os.remove(image_path)
                 print(f"[✅] Umumiy vaqt: {time.time() - start_all:.2f}s")
+
+async def send_stock_info_to_user(ticker: str, chat_id: int):
+    bot = Bot(token=TELEGRAM_BOT_TOKEN)
+    start_all = time.time()
+
+    tv_symbol = get_tradingview_symbol(ticker)
+    image_path = None
+    now = datetime.datetime.now().strftime('%H:%M, %d.%m.%Y')
+
+    try:
+        # Ma'lumotlarni olish
+        price, rsi, yf_volume = get_stock_info(ticker)
+        support, resistance = calculate_support_resistance_from_range(ticker)
+        image_path = tradingview_chart_only_screenshot(ticker)
+
+        summary, evaluated_lines, display_lines, rsi_finviz, volume = get_finviz_fundamentals(ticker)
+        volume_data = get_put_call_volume(ticker)
+        call_vol = volume_data.get("Call Volume", "?")
+        put_vol = volume_data.get("Put Volume", "?")
+
+        if call_vol != "?":
+            call_vol = f"{int(call_vol):,}"
+        if put_vol != "?":
+            put_vol = f"{int(put_vol):,}"
+
+        sentiment_block = await get_sentiment_summary(ticker)  # asinxron chaqiriq
+
+        caption = (
+            f"💹 <b>Ticker:</b> #{ticker}\n"
+            f"--------------------------------\n"
+            f"📈 <b>RSI (14):</b> {rsi_finviz}\n"
+            f"📊 <b>Volume:</b> {yf_volume}k\n"
+            f"--------------------------------\n"
+            f"🔽 <b>Resistance Zone:</b> ${resistance}\n"
+            f"💵 <b>Price:</b> ${price:.2f}\n"
+            f"🔼 <b>Support Zone:</b> ${support}\n"
+            f"--------------------------------\n"
+            f"📊 <b>Fundamental Info:</b>\n"
+            f"{chr(10).join(display_lines)}\n"
+            f"📉 <b>Put Volume:</b> {put_vol}\n"
+            f"📈 <b>Call Volume:</b> {call_vol}\n"
+            f"--------------------------------\n"
+            f"{summary}\n"
+            f"{chr(10).join(evaluated_lines)}\n"
+            f"--------------------------------\n"
+            f"{sentiment_block}\n\n"
+            f"🕒 <b>Time:</b> {now}\n\n"
+            f"<a href='https://www.tradingview.com/chart/?symbol={tv_symbol}'>TradingView</a>"
+        )
+
+        if image_path:
+            with open(image_path, 'rb') as photo:
+                bot.send_photo(
+                    chat_id=chat_id,
+                    photo=photo,
+                    caption=caption,
+                    parse_mode='HTML',
+                    timeout=120
+                )
+        else:
+            raise Exception("Grafik yuklanmadi")
+
+    except Exception as e:
+        fallback_message = (
+            f"❌ {ticker} ma'lumotlarni olishda xatolik yuz berdi: {str(e)}"
+        )
+        await bot.send_message(chat_id=chat_id, text=fallback_message)
+
+    finally:
+        if image_path and os.path.exists(image_path):
+            os.remove(image_path)

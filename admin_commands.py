@@ -1,4 +1,4 @@
-# admin_commands.py (faqat komandalar uchun tozalangan versiya)
+# bot/admin_commands.py
 
 import os
 import datetime
@@ -6,8 +6,10 @@ import psutil
 from telegram import Update
 from telegram.ext import CallbackContext
 
-# Global o'zgaruvchilar
+# Bot ishga tushgan vaqtdan beri hisoblash uchun
 start_time = datetime.datetime.now()
+
+# Global monitoring holatlari
 last_alert_time = None
 is_paused = False
 check_interval = 10
@@ -43,10 +45,10 @@ def setinterval(update: Update, context: CallbackContext):
     try:
         if context.args:
             new_interval = int(context.args[0])
-            check_interval = max(5, new_interval)
-            update.message.reply_text(f"⏱ Yangi interval: {check_interval} soniya")
         else:
-            update.message.reply_text("❗ Format: /setinterval 30")
+            new_interval = int(update.message.text.strip())
+        check_interval = max(5, new_interval)
+        update.message.reply_text(f"⏱ Yangi interval: {check_interval} soniya")
     except:
         update.message.reply_text("❌ Xatolik: Raqam formatida yuboring")
 
@@ -77,7 +79,6 @@ def memory(update: Update, context: CallbackContext):
 
 def restart_bot(update: Update, context: CallbackContext):
     update.message.reply_text("🔁 Bot qayta ishga tushmoqda (Linux - systemd)...")
-    import os
     os.system("systemctl --user restart telegrambot.service")
 
 def simulate(update: Update, context: CallbackContext):

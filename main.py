@@ -20,6 +20,7 @@ from bot.role_handler import role_handler
 from config import TELEGRAM_BOT_TOKEN
 from gmail_utils import get_new_alerts
 from telegram_utils import send_alerts_to_telegram
+from bot.user_actions import handle_user_command
 
 # Global holat: tanlangan foydalanuvchi rollari
 user_roles = {}
@@ -43,18 +44,22 @@ def clear_restart_signal():
 async def main():
     print("✅ Bot ishga tushdi...")
 
-    # updater = Updater(token=TELEGRAM_BOT_TOKEN, use_context=True)
-    # dispatcher = updater.dispatcher
-    #
-    # # /start bosilganda rol tanlash menyusi chiqadi
-    # dispatcher.add_handler(CommandHandler("start", start))
-    #
-    # # Roldan keyingi tugma menyuni ko‘rsatish
-    # dispatcher.add_handler(MessageHandler(Filters.regex("^(👑 Admin|👤 User)$"), role_handler))
-    # dispatcher.add_handler(MessageHandler(Filters.text & Filters.regex("^.*"), handle_admin_command))
-    # dispatcher.add_handler(MessageHandler(Filters.text("🔙 Ortga"), handle_back))
-    #
-    # updater.start_polling()
+    updater = Updater(token=TELEGRAM_BOT_TOKEN, use_context=True)
+    dispatcher = updater.dispatcher
+
+    # /start bosilganda rol tanlash menyusi chiqadi
+    dispatcher.add_handler(CommandHandler("start", start))
+
+    dispatcher.add_handler(
+        MessageHandler(Filters.regex("🔍 Askiya haqida to'liq ma'lumot olish:"), handle_user_command))
+    dispatcher.add_handler(MessageHandler(Filters.regex("^[A-Za-z]{1,6}$"), handle_user_command))  # Ticker uchun
+
+    # Roldan keyingi tugma menyuni ko‘rsatish
+    dispatcher.add_handler(MessageHandler(Filters.regex("^(👑 Admin|👤 User)$"), role_handler))
+    dispatcher.add_handler(MessageHandler(Filters.text & Filters.regex("^.*"), handle_admin_command))
+    dispatcher.add_handler(MessageHandler(Filters.text("🔙 Ortga"), handle_back))
+
+    updater.start_polling()
 
     if check_for_restart_signal():
         print("♻️ Restart signal topildi, qayta ishga tushiryapman...")
