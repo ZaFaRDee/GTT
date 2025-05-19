@@ -165,7 +165,7 @@ async def send_stock_info_to_user(ticker: str, chat_id: int):
         if put_vol != "?":
             put_vol = f"{int(put_vol):,}"
 
-        sentiment_block = await get_sentiment_summary(ticker)  # asinxron chaqiriq
+        # sentiment_block = await get_sentiment_summary(ticker)  # asinxron chaqiriq
 
         caption = (
             f"💹 <b>Ticker:</b> #{ticker}\n"
@@ -185,7 +185,7 @@ async def send_stock_info_to_user(ticker: str, chat_id: int):
             f"{summary}\n"
             f"{chr(10).join(evaluated_lines)}\n"
             f"--------------------------------\n"
-            f"{sentiment_block}\n\n"
+            # f"{sentiment_block}\n\n"
             f"🕒 <b>Time:</b> {now}\n\n"
             f"<a href='https://www.tradingview.com/chart/?symbol={tv_symbol}'>TradingView</a>"
         )

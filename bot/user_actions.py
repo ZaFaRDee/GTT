@@ -1,6 +1,8 @@
 import asyncio
 
 import yfinance as yf
+
+import config
 from config import ALLOWED_USERS, refresh_allowed_users
 from telegram import Update
 from telegram.ext import CallbackContext
@@ -21,7 +23,7 @@ def handle_user_command(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     text = update.message.text.strip()
 
-    if not any(u.get("id") == user_id for u in ALLOWED_USERS):
+    if not any(u.get("id") == user_id for u in config.ALLOWED_USERS):
         update.message.reply_text("🚫 Sizga ruxsat berilmagan.")
         return
 
