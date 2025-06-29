@@ -73,78 +73,70 @@ def get_put_call_volume(ticker: str):
 
 def screenshot_barchart_putcall(ticker: str) -> str | None:
     import os
-    import random
     import time
+    import random
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.chrome.service import Service
     from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.common.exceptions import TimeoutException, NoSuchElementException
+    from selenium.common.exceptions import TimeoutException, WebDriverException
     from webdriver_manager.chrome import ChromeDriverManager
 
     url = f"https://www.barchart.com/stocks/quotes/{ticker}/put-call-ratios"
     screenshot_path = f"images/{ticker.upper()}_putcall.png"
 
-    print(f"[🔍] Sahifa ochilmoqda: {url}")
-
     options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--disable-infobars")
+    # Barqaror va eng kam xatolik beradigan sozlamalar
+    options.add_argument("--headless")
+    options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,3000")
-    options.add_argument("start-maximized")
-    options.add_argument("disable-gpu")
+    options.add_argument("--disable-software-rasterizer")
     options.add_argument("--disable-features=VizDisplayCompositor")
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    )
+    options.add_argument("--blink-settings=imagesEnabled=true")
+    options.add_argument("--start-maximized")
+    options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                         "(KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36")
 
-    driver = None
     try:
+        print(f"[🔍] Sahifa ochilmoqda: {url}")
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        driver.set_page_load_timeout(60)
-        driver.set_script_timeout(60)
+        driver.set_page_load_timeout(90)
+        driver.set_script_timeout(90)
 
         driver.get(url)
-        print("[⏳] Yuklanmoqda va maskirovka kiritilmoqda...")
-        time.sleep(random.uniform(6, 9))
-        driver.execute_script("window.scrollBy(0, 800);")
-        time.sleep(random.uniform(2, 3))
 
-        # Reklama bannerlarini yopishga harakat qilamiz
-        try:
-            close_buttons = driver.find_elements(By.CSS_SELECTOR, "button[aria-label='Close'], .close, .bc-close")
-            for btn in close_buttons:
-                try:
-                    btn.click()
-                    print("[✖] Popup/banner yopildi.")
-                    time.sleep(1)
-                except:
-                    continue
-        except:
-            print("[⚠️] Popup yopishda muammo bo‘ldi yoki banner topilmadi.")
+        # Insondek harakat — yuklash uchun kutish
+        time.sleep(random.uniform(9, 12))
+        driver.execute_script("window.scrollBy(0, 800);")
+        time.sleep(3)
 
         os.makedirs("images", exist_ok=True)
 
-        wait = WebDriverWait(driver, 20)
-        target = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.one-column-block")))
+        # Reklama bannerlar yopilishi (agar mavjud bo‘lsa)
+        try:
+            banner = driver.find_element(By.CSS_SELECTOR, ".qc-cmp2-summary-buttons")
+            btn = banner.find_element(By.CSS_SELECTOR, "button[mode='primary']")
+            btn.click()
+            time.sleep(1)
+            print("[✖] Popup/banner'lar yopildi.")
+        except:
+            print("[ℹ️] Popup/banner topilmadi — davom etamiz.")
 
+        # Jadvalni topib screenshot olish
+        target = driver.find_element(By.CSS_SELECTOR, "div.one-column-block")
         target.screenshot(screenshot_path)
-        print(f"[✓] Screenshot saqlandi: {screenshot_path}")
 
+        print(f"[📸] Jadval saqlandi: {screenshot_path}")
         return screenshot_path
 
     except TimeoutException:
-        print("❌ Page load timeout exceeded.")
+        print("❌ Timeout: Sahifa yuklanmadi.")
         return None
 
-    except NoSuchElementException:
-        print("❌ Jadval topilmadi - element yo‘q.")
+    except WebDriverException as e:
+        print(f"❌ WebDriver xatolik: {e}")
         return None
 
     except Exception as e:
@@ -152,9 +144,7 @@ def screenshot_barchart_putcall(ticker: str) -> str | None:
         return None
 
     finally:
-        if driver:
-            try:
-                driver.quit()
-                print("[✖] Chrome toza yopildi.")
-            except Exception as e:
-                print(f"⚠️ Chrome yopishda xatolik: {e}")
+        try:
+            driver.quit()
+        except:
+            pass
