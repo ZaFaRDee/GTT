@@ -79,20 +79,23 @@ def screenshot_barchart_putcall(ticker: str) -> str | None:
     from selenium.webdriver.common.by import By
     from selenium.common.exceptions import TimeoutException, WebDriverException
     from webdriver_manager.chrome import ChromeDriverManager
+    print(ChromeDriverManager().install())  # Bu sizga driver joylashgan yo‘lni ko‘rsatadi
+    from pyvirtualdisplay import Display
 
     url = f"https://www.barchart.com/stocks/quotes/{ticker}/put-call-ratios"
     screenshot_path = f"images/{ticker.upper()}_putcall.png"
 
+    # Virtual ekran (xvfb) ishga tushiriladi
+    display = Display(visible=0, size=(1920, 1080))
+    display.start()
+
     options = Options()
-    options.add_argument("--headless=new")
+    options.add_argument("--headless=new")  # new engine, still uses xvfb backend
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-software-rasterizer")
-    options.add_argument("--disable-background-networking")
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-sync")
-    options.add_argument("--disable-translate")
+    options.add_argument("--disable-features=VizDisplayCompositor")
     options.add_argument("--window-size=1920,3000")
     options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
                          "(KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36")
@@ -105,20 +108,23 @@ def screenshot_barchart_putcall(ticker: str) -> str | None:
 
         driver.get(url)
 
-        time.sleep(random.uniform(10, 14))  # sahifa to‘liq yuklansin
+        time.sleep(random.uniform(10, 13))
         driver.execute_script("window.scrollBy(0, 800);")
         time.sleep(2)
 
-        # Reklama popup’ni yopish
+        os.makedirs("images", exist_ok=True)
+
+        # Reklama banner'larini yopish
         try:
             banner = driver.find_element(By.CSS_SELECTOR, ".qc-cmp2-summary-buttons")
             btn = banner.find_element(By.CSS_SELECTOR, "button[mode='primary']")
             btn.click()
+            time.sleep(1)
             print("[✖] Popup/banner yopildi.")
         except:
-            print("[ℹ️] Popup/banner topilmadi.")
+            print("[ℹ️] Popup/banner topilmadi — davom etamiz.")
 
-        os.makedirs("images", exist_ok=True)
+        # Jadvalni topish va screenshot olish
         target = driver.find_element(By.CSS_SELECTOR, "div.one-column-block")
         target.screenshot(screenshot_path)
         print(f"[📸] Jadval saqlandi: {screenshot_path}")
@@ -139,3 +145,4 @@ def screenshot_barchart_putcall(ticker: str) -> str | None:
                 driver.quit()
             except:
                 pass
+        display.stop()
