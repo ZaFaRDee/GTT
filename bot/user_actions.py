@@ -5,10 +5,15 @@ import config
 from config import ALLOWED_USERS, refresh_allowed_users
 from telegram import Update
 from telegram.ext import CallbackContext
-from telegram_utils import send_fundamental_info_to_user, send_sentimental_info_to_user, \
-    send_barchart_options_screenshot_to_user
+from telegram_utils import (
+    send_fundamental_info_to_user,
+    send_sentimental_info_to_user,
+    send_barchart_options_screenshot_to_user,
+    send_halal_info_to_user  # ✅ Yangi funksiya qo‘shildi
+)
 
-awaiting_ticker = {}  # user_id -> "fundamental", "sentimental", yoki "putcall"
+# Foydalanuvchi uchun kutilyotgan ticker turi: "fundamental", "sentimental", "putcall", "halal"
+awaiting_ticker = {}
 
 def is_valid_ticker(ticker):
     stock = yf.Ticker(ticker)
@@ -46,28 +51,37 @@ def handle_user_command(update: Update, context: CallbackContext):
                     asyncio.run(send_sentimental_info_to_user(ticker, update.effective_chat.id))
                 elif analysis_type == "putcall":
                     asyncio.run(send_barchart_options_screenshot_to_user(ticker, update.effective_chat.id))
+                elif analysis_type == "halal":
+                    send_halal_info_to_user(ticker, update.effective_chat.id)  # ✅ Yangi funksiya
             except Exception as e:
                 context.bot.send_message(
                     chat_id=update.effective_chat.id,
                     text="❌ Ichki xatolik yuz berdi. Keyinroq qayta urinib ko‘ring."
                 )
 
-        # ✅ Fon thread ishlatamiz (asyncio o‘rniga)
         threading.Thread(target=run_analysis_thread).start()
         return
 
-    # Tugma tanlovlar
+    # 📊 Fundamental tahlil
     if text == "📊 Fundamental tahlil":
         awaiting_ticker[user_id] = "fundamental"
         update.message.reply_text("📝 Iltimos, ticker kiriting (masalan: AAPL):")
         return
 
+    # 📰 Sentimental tahlil
     if text == "📰 Sentimental tahlil":
         awaiting_ticker[user_id] = "sentimental"
         update.message.reply_text("📝 Iltimos, ticker kiriting (masalan: TSLA):")
         return
 
+    # 📈 Put/Call ma'lumot
     if text == "📈 Put/Call ma'lumot":
         awaiting_ticker[user_id] = "putcall"
         update.message.reply_text("📝 Iltimos, ticker kiriting (masalan: TSLA):")
+        return
+
+    # 🔎 Halollikka tekshirish
+    if text == "🔎 Halollikka tekshirish":
+        awaiting_ticker[user_id] = "halal"
+        update.message.reply_text("📝 Iltimos, ticker kiriting (masalan: GOOGL):")
         return

@@ -59,7 +59,7 @@ async def main():
     dispatcher.add_handler(MessageHandler(Filters.regex("^[A-Za-z]{1,6}$"), handle_user_command))  # Ticker uchun
 
     dispatcher.add_handler(
-        MessageHandler(Filters.regex("📈 Put/Call ma'lumot"), handle_user_command))
+        MessageHandler(Filters.regex("🔎 Halollikka tekshirish"), handle_user_command))
     dispatcher.add_handler(MessageHandler(Filters.regex("^[A-Za-z]{1,6}$"), handle_user_command))  # Ticker uchun
 
     # Roldan keyingi tugma menyuni ko‘rsatish

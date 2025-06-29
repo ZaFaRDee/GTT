@@ -1,6 +1,8 @@
 # telegram_utils.py
+
 import asyncio
 import os
+import yfinance as yf
 import datetime
 from telegram import Bot
 from stock_analysis import get_stock_info, calculate_support_resistance_from_range
@@ -11,8 +13,8 @@ from finviz_analysis import get_finviz_fundamentals
 from barchart_utils import get_put_call_volume
 from sentimental.news_sentiment import get_sentiment_summary
 from barchart_utils import screenshot_barchart_putcall
+from deep_translator import GoogleTranslator
 import time
-from telegram import InputFile
 
 
 async def send_alerts_to_telegram(alerts):
@@ -330,3 +332,45 @@ async def send_barchart_options_screenshot_to_user(ticker: str, chat_id: int):
         if image_path and os.path.exists(image_path):
             os.remove(image_path)
 
+import json
+
+def send_halal_info_to_user(ticker: str, chat_id: int):
+    bot = Bot(token=TELEGRAM_BOT_TOKEN)
+    try:
+        ticker = ticker.upper()
+        stock = yf.Ticker(ticker)
+        info = stock.info
+
+        # ✅ Faqat halol tickerlar ro'yxatini yuklaymiz
+        try:
+            with open("halal_tickers.json", "r", encoding="utf-8") as f:
+                halal_tickers = json.load(f)
+        except Exception as e:
+            halal_tickers = []
+
+        is_halal = ticker in halal_tickers
+        halal_status = "🟢 Halol" if is_halal else "🔴 Halol emas"
+
+        # 📊 Ma'lumotlar
+        price = info.get("currentPrice") or info.get("regularMarketPrice", "?")
+        sector = info.get("sector", "Nomaʼlum")
+        volume = info.get("volume", "?")
+        # description = info.get("longBusinessSummary", "Maʼlumot topilmadi.")[:500] + "..."
+        uzbek_summary = GoogleTranslator(source='en', target='uz').translate(info.get("longBusinessSummary", ""))[:500] + "..."
+
+        # 📤 Format
+        caption = (
+            f"📌 Aksiya haqida umumiy ma'lumot:\n\n"
+            f"💹 Ticker: <b>{ticker}</b>\n"
+            f"🗄 Sektor: {sector}\n"
+            f"💵 Narx: ${price}\n"
+            f"📊 Volume: {volume:,}\n\n"
+            f"🧮 Halollik tekshiruvi: {halal_status}\n\n"
+            f"📝 Faoliyat: {uzbek_summary}\n\n"
+            f"❗️ Eslatma: Halollik maʼlumotlari faqat oldindan tasdiqlangan ro'yxatga asoslangan. Savdoga kirishdan oldin ishonchli manbalardan tekshirishingiz tavsiya etiladi."
+        )
+
+        bot.send_message(chat_id=chat_id, text=caption, parse_mode="HTML")
+
+    except Exception as e:
+        bot.send_message(chat_id=chat_id, text=f"❌ Xatolik: {str(e)}")
