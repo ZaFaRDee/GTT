@@ -72,9 +72,7 @@ def get_put_call_volume(ticker: str):
         driver.quit()
 
 def screenshot_barchart_putcall(ticker: str) -> str | None:
-    import os
-    import time
-    import random
+    import os, time, random
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.chrome.service import Service
@@ -86,65 +84,58 @@ def screenshot_barchart_putcall(ticker: str) -> str | None:
     screenshot_path = f"images/{ticker.upper()}_putcall.png"
 
     options = Options()
-    # Barqaror va eng kam xatolik beradigan sozlamalar
-    options.add_argument("--headless")
+    options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--window-size=1920,3000")
     options.add_argument("--disable-software-rasterizer")
-    options.add_argument("--disable-features=VizDisplayCompositor")
-    options.add_argument("--blink-settings=imagesEnabled=true")
-    options.add_argument("--start-maximized")
+    options.add_argument("--disable-background-networking")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-sync")
+    options.add_argument("--disable-translate")
+    options.add_argument("--window-size=1920,3000")
     options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
                          "(KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36")
 
+    driver = None
     try:
         print(f"[🔍] Sahifa ochilmoqda: {url}")
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         driver.set_page_load_timeout(90)
-        driver.set_script_timeout(90)
 
         driver.get(url)
 
-        # Insondek harakat — yuklash uchun kutish
-        time.sleep(random.uniform(9, 12))
+        time.sleep(random.uniform(10, 14))  # sahifa to‘liq yuklansin
         driver.execute_script("window.scrollBy(0, 800);")
-        time.sleep(3)
+        time.sleep(2)
 
-        os.makedirs("images", exist_ok=True)
-
-        # Reklama bannerlar yopilishi (agar mavjud bo‘lsa)
+        # Reklama popup’ni yopish
         try:
             banner = driver.find_element(By.CSS_SELECTOR, ".qc-cmp2-summary-buttons")
             btn = banner.find_element(By.CSS_SELECTOR, "button[mode='primary']")
             btn.click()
-            time.sleep(1)
-            print("[✖] Popup/banner'lar yopildi.")
+            print("[✖] Popup/banner yopildi.")
         except:
-            print("[ℹ️] Popup/banner topilmadi — davom etamiz.")
+            print("[ℹ️] Popup/banner topilmadi.")
 
-        # Jadvalni topib screenshot olish
+        os.makedirs("images", exist_ok=True)
         target = driver.find_element(By.CSS_SELECTOR, "div.one-column-block")
         target.screenshot(screenshot_path)
-
         print(f"[📸] Jadval saqlandi: {screenshot_path}")
         return screenshot_path
 
     except TimeoutException:
         print("❌ Timeout: Sahifa yuklanmadi.")
         return None
-
     except WebDriverException as e:
         print(f"❌ WebDriver xatolik: {e}")
         return None
-
     except Exception as e:
         print(f"❌ Screenshot xatoligi: {e}")
         return None
-
     finally:
-        try:
-            driver.quit()
-        except:
-            pass
+        if driver:
+            try:
+                driver.quit()
+            except:
+                pass
