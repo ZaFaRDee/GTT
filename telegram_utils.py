@@ -10,6 +10,7 @@ from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from finviz_analysis import get_finviz_fundamentals
 from barchart_utils import get_put_call_volume
 from sentimental.news_sentiment import get_sentiment_summary
+from barchart_utils import screenshot_barchart_putcall
 import time
 from telegram import InputFile
 
@@ -211,3 +212,121 @@ async def send_stock_info_to_user(ticker: str, chat_id: int):
     finally:
         if image_path and os.path.exists(image_path):
             os.remove(image_path)
+
+async def send_fundamental_info_to_user(ticker: str, chat_id: int):
+    bot = Bot(token=TELEGRAM_BOT_TOKEN)
+    now = datetime.datetime.now().strftime('%H:%M, %d.%m.%Y')
+    image_path = None
+
+    try:
+        price, rsi, yf_volume = get_stock_info(ticker)
+        support, resistance = calculate_support_resistance_from_range(ticker)
+        image_path = tradingview_chart_only_screenshot(ticker)
+
+        summary, evaluated_lines, display_lines, rsi_finviz, volume = get_finviz_fundamentals(ticker)
+
+        tv_symbol = get_tradingview_symbol(ticker)
+
+        caption = (
+            f"💹 <b>Ticker:</b> #{ticker}\n"
+            f"--------------------------------\n"
+            f"📈 <b>RSI (14):</b> {rsi_finviz}\n"
+            f"📊 <b>Volume:</b> {yf_volume}k\n"
+            f"--------------------------------\n"
+            f"🔽 <b>Resistance Zone:</b> ${resistance}\n"
+            f"💵 <b>Price:</b> ${price:.2f}\n"
+            f"🔼 <b>Support Zone:</b> ${support}\n"
+            f"--------------------------------\n"
+            f"📊 <b>Fundamental Info:</b>\n"
+            f"{chr(10).join(display_lines)}\n"
+            f"--------------------------------\n"
+            f"{summary}\n"
+            f"{chr(10).join(evaluated_lines)}\n\n"
+            f"🕒 <b>Time:</b> {now}\n\n"
+            f"<a href='https://www.tradingview.com/chart/?symbol={tv_symbol}'>TradingView</a>"
+        )
+
+        if image_path:
+            with open(image_path, 'rb') as photo:
+                bot.send_photo(
+                    chat_id=chat_id,
+                    photo=photo,
+                    caption=caption,
+                    parse_mode='HTML'
+                )
+        else:
+            await bot.send_message(chat_id=chat_id, text=caption, parse_mode='HTML')
+
+    except Exception as e:
+        await bot.send_message(chat_id=chat_id, text=f"❌ Xatolik: {str(e)}")
+
+    finally:
+        if image_path and os.path.exists(image_path):
+            os.remove(image_path)
+
+async def send_sentimental_info_to_user(ticker: str, chat_id: int):
+    bot = Bot(token=TELEGRAM_BOT_TOKEN)
+    now = datetime.datetime.now().strftime('%H:%M, %d.%m.%Y')
+    image_path = None
+
+    try:
+        price, rsi, yf_volume = get_stock_info(ticker)
+        support, resistance = calculate_support_resistance_from_range(ticker)
+        image_path = tradingview_chart_only_screenshot(ticker)
+        sentiment_block = await get_sentiment_summary(ticker)
+
+        tv_symbol = get_tradingview_symbol(ticker)
+
+        caption = (
+            f"💹 <b>Ticker:</b> #{ticker}\n"
+            f"--------------------------------\n"
+            f"{sentiment_block}\n\n"
+            f"🕒 <b>Time:</b> {now}\n\n"
+            f"<a href='https://www.tradingview.com/chart/?symbol={tv_symbol}'>TradingView</a>"
+        )
+
+        if image_path:
+            with open(image_path, 'rb') as photo:
+                bot.send_photo(
+                    chat_id=chat_id,
+                    photo=photo,
+                    caption=caption,
+                    parse_mode='HTML'
+                )
+        else:
+            await bot.send_message(chat_id=chat_id, text=caption, parse_mode='HTML')
+
+    except Exception as e:
+        await bot.send_message(chat_id=chat_id, text=f"❌ Xatolik: {str(e)}")
+
+    finally:
+        if image_path and os.path.exists(image_path):
+            os.remove(image_path)
+
+async def send_barchart_options_screenshot_to_user(ticker: str, chat_id: int):
+    bot = Bot(token=TELEGRAM_BOT_TOKEN)
+    now = datetime.datetime.now().strftime('%H:%M, %d.%m.%Y')
+
+    try:
+        image_path = screenshot_barchart_putcall(ticker)
+
+        if image_path:
+            caption = (
+                f"📊 <b>#{ticker.upper()} Put/Call Options Analysis</b>\n\n"
+                f"The chart and table are taken from Barchart.com\n\n"
+                f"🕒 <b>Time:</b> {now}\n\n"
+                f"<a href='https://www.barchart.com/stocks/quotes/{ticker}/put-call-ratios'>View details</a>"
+            )
+            with open(image_path, 'rb') as photo:
+                bot.send_photo(chat_id=chat_id, photo=photo, caption=caption, parse_mode='HTML')
+        else:
+            bot.send_message(chat_id=chat_id, text="❌ Jadvalni yuklab bo‘lmadi.")
+
+    except Exception as e:
+        bot.send_message(chat_id=chat_id, text=f"❌ Xatolik yuz berdi: {str(e)}")
+
+    finally:
+        # Faylni o‘chirish
+        if image_path and os.path.exists(image_path):
+            os.remove(image_path)
+

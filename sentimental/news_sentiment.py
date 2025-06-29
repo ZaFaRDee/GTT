@@ -57,11 +57,11 @@ async def get_sentiment_summary(ticker):
         return "\U0001F4F0 Sentimental Analysis:\n\tMa'lumot topilmadi."
 
     total = total_pos + total_neg
-    lines = [f"📰 <b>Sentimental Score:</b> {total_pos} / {total}"]
+    lines = [f"📰 <b>Sentimental Score:</b> {total_pos} / {total}\n"]
     for name, pos, neu, neg, overall in sources:
         name_aligned = name.ljust(16)  # ustunlarni to‘g‘rilash uchun
         lines.append(f"🌐 <b>{name_aligned}</b> → <b>{overall}</b>")
-        lines.append(f"🟢 {str(pos).ljust(3)} 🟡 {str(neu).ljust(3)} 🔴 {str(neg).ljust(3)}")
+        lines.append(f"🟢 {str(pos).ljust(3)} 🟡 {str(neu).ljust(3)} 🔴 {str(neg).ljust(3)}\n")
 
     return "\n".join(lines)
 

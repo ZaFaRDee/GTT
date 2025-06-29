@@ -1,20 +1,20 @@
 import asyncio
-
 import yfinance as yf
-
+import threading
 import config
 from config import ALLOWED_USERS, refresh_allowed_users
 from telegram import Update
 from telegram.ext import CallbackContext
-from telegram_utils import send_stock_info_to_user
+from telegram_utils import send_fundamental_info_to_user, send_sentimental_info_to_user, \
+    send_barchart_options_screenshot_to_user
 
-awaiting_ticker = set()
+awaiting_ticker = {}  # user_id -> "fundamental", "sentimental", yoki "putcall"
 
 def is_valid_ticker(ticker):
     stock = yf.Ticker(ticker)
     try:
         info = stock.info
-        return bool(info.get("shortName"))  # mavjud kompaniya nomi borligini tekshirish
+        return bool(info.get("shortName"))
     except Exception:
         return False
 
@@ -27,8 +27,9 @@ def handle_user_command(update: Update, context: CallbackContext):
         update.message.reply_text("🚫 Sizga ruxsat berilmagan.")
         return
 
+    # ✅ Ticker kutilayotgan foydalanuvchi uchun
     if user_id in awaiting_ticker:
-        awaiting_ticker.remove(user_id)
+        analysis_type = awaiting_ticker.pop(user_id)
         ticker = text.upper()
         update.message.reply_text("⏳ Iltimos, kuting... Aksiya ma'lumotlari olinmoqda...")
 
@@ -37,14 +38,36 @@ def handle_user_command(update: Update, context: CallbackContext):
                 "❌ Kiritilgan ticker topilmadi. Iltimos, mavjud birja kodini kiriting (masalan: AAPL, MSFT, TSLA).")
             return
 
-        try:
-            asyncio.run(send_stock_info_to_user(ticker, update.effective_chat.id))
-        except Exception as e:
-            update.message.reply_text("❌ Ichki xatolik yuz berdi. Keyinroq qayta urinib ko‘ring.")
-            # logger.error(f"Xatolik: {e}")
+        def run_analysis_thread():
+            try:
+                if analysis_type == "fundamental":
+                    asyncio.run(send_fundamental_info_to_user(ticker, update.effective_chat.id))
+                elif analysis_type == "sentimental":
+                    asyncio.run(send_sentimental_info_to_user(ticker, update.effective_chat.id))
+                elif analysis_type == "putcall":
+                    asyncio.run(send_barchart_options_screenshot_to_user(ticker, update.effective_chat.id))
+            except Exception as e:
+                context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text="❌ Ichki xatolik yuz berdi. Keyinroq qayta urinib ko‘ring."
+                )
+
+        # ✅ Fon thread ishlatamiz (asyncio o‘rniga)
+        threading.Thread(target=run_analysis_thread).start()
         return
 
-    if text.lower() == "🔍 askiya haqida to'liq ma'lumot olish:":
-        awaiting_ticker.add(user_id)
-        update.message.reply_text("📝 Iltimos, aksiya tickerini kiriting (masalan: AAPL)")
+    # Tugma tanlovlar
+    if text == "📊 Fundamental tahlil":
+        awaiting_ticker[user_id] = "fundamental"
+        update.message.reply_text("📝 Iltimos, ticker kiriting (masalan: AAPL):")
+        return
+
+    if text == "📰 Sentimental tahlil":
+        awaiting_ticker[user_id] = "sentimental"
+        update.message.reply_text("📝 Iltimos, ticker kiriting (masalan: TSLA):")
+        return
+
+    if text == "📈 Put/Call ma'lumot":
+        awaiting_ticker[user_id] = "putcall"
+        update.message.reply_text("📝 Iltimos, ticker kiriting (masalan: TSLA):")
         return

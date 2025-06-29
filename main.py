@@ -51,7 +51,15 @@ async def main():
     dispatcher.add_handler(CommandHandler("start", start))
 
     dispatcher.add_handler(
-        MessageHandler(Filters.regex("🔍 Askiya haqida to'liq ma'lumot olish:"), handle_user_command))
+        MessageHandler(Filters.regex("📊 Fundamental tahlil"), handle_user_command))
+    dispatcher.add_handler(MessageHandler(Filters.regex("^[A-Za-z]{1,6}$"), handle_user_command))  # Ticker uchun
+
+    dispatcher.add_handler(
+        MessageHandler(Filters.regex("📰 Sentimental tahlil"), handle_user_command))
+    dispatcher.add_handler(MessageHandler(Filters.regex("^[A-Za-z]{1,6}$"), handle_user_command))  # Ticker uchun
+
+    dispatcher.add_handler(
+        MessageHandler(Filters.regex("📈 Put/Call ma'lumot"), handle_user_command))
     dispatcher.add_handler(MessageHandler(Filters.regex("^[A-Za-z]{1,6}$"), handle_user_command))  # Ticker uchun
 
     # Roldan keyingi tugma menyuni ko‘rsatish
